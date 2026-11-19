@@ -1,8 +1,8 @@
 # Breakwater ’84
 
-[![Make GTA 6](https://make.fun/badge/gta6-01.svg)](https://make.fun/c/gta6-01)
-[![Rank](https://make.fun/badge/gta6-01/hatch/breakwater-84/rank.svg)](https://make.fun/c/gta6-01)
-[![Reward](https://make.fun/badge/gta6-01/hatch/breakwater-84/reward.svg)](https://make.fun/c/gta6-01)
+[![make.fun · gta6-01](https://make.fun/badge/gta6-01.svg)](https://make.fun/bounty/gta6-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
+[![rank](https://make.fun/badge/gta6-01/bee6en9/gta6-01/rank.svg)](https://make.fun/bounty/gta6-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
+[![reward](https://make.fun/badge/gta6-01/bee6en9/gta6-01/reward.svg)](https://make.fun/bounty/gta6-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
 
 In the summer of 1984, the Breakwater Port Authority cuts the transmitter at Kite FM. Drive the coast as Ari, take back the station, and find out what the port board paid to keep off the air.
 
