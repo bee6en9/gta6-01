@@ -1,0 +1,8 @@
+# Local browser tooling supplied with the workspace
+.browsers/
+.npm-cache/
+.tools/
+.browser-profile/
+browser.mjs
+serve.ts
+

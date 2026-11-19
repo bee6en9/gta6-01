@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#112237">
+<title>Breakwater ’84</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="city" aria-label="Breakwater city"></canvas>
+<div id="hud" hidden>
+  <header class="mast"><b>BW<span>84</span></b><div><small>BREAKWATER COUNTY</small><strong id="district"></strong></div></header>
+  <section class="status slab" aria-label="Player status">
+    <div><small>POLICE SCANNER</small><strong id="stars"></strong></div>
+    <div class="money"><small>CASH</small><strong id="cash"></strong></div>
+    <div class="health"><small>VITALS <span id="healthValue"></span></small><div class="track"><i id="health"></i></div></div>
+  </section>
+  <section class="job slab"><small id="missionNo"></small><strong id="missionName"></strong><p id="objective"></p></section>
+  <aside id="mapBox" class="slab"><div class="maphead"><span>LOCAL GRID</span><b>N ↑</b></div><canvas id="minimap" width="320" height="320" aria-label="Map of Breakwater"></canvas><div class="mapfoot"><span>● LIVE</span><span>M / MAP</span></div></aside>
+  <div id="dialogue" class="slab" hidden></div>
+  <div id="toast" hidden></div>
+  <div id="arrest" class="slab" hidden>DETAINING <span id="hold"></span></div>
+  <div class="tools slab"><small id="toolLabel"></small><strong id="toolValue"></strong><span id="toolTip"></span></div>
+  <div class="keystrip">WASD <b>MOVE</b> &nbsp; E <b>RIDE</b> &nbsp; F <b>USE</b> &nbsp; ESC <b>MENU</b></div>
+</div>
+<main id="menu" hidden>
+  <div class="titleframe">
+    <div class="eyebrow"><span>● KITE FM 84.3</span><span>SUMMER / 1984</span></div>
+    <div id="titleArt">
+      <p class="pretend">A PIRATE RADIO STORY</p>
+      <h1>BREAK<span>WATER</span><em>’84</em></h1>
+      <p class="tagline">They bought the harbor.<br>They couldn’t buy the air.</p>
+    </div>
+    <h2 id="pauseTitle" hidden>ON HOLD</h2>
+    <div class="buttons">
+      <button id="start">Start the story <span>↗</span></button>
+      <button id="resume" hidden>Resume <span>↗</span></button>
+      <button id="load" hidden>Continue save <span>↗</span></button>
+      <button id="save" hidden>Save progress <span>↗</span></button>
+      <button id="settings">Sound: on <span>Q / RADIO</span></button>
+    </div>
+    <div id="menuNote" role="status"></div>
+    <footer>WASD / ARROWS · SHIFT RUN · SPACE BRAKE / FIRE<br>E ENTER / EXIT · F INTERACT · CLICK AIM / FIRE · R RELOAD</footer>
+  </div>
+  <div class="edition"><span>01 / MARIGOLD COAST</span><span>ORIGINAL GAME BY MAKE.FUN ENTRANT</span></div>
+</main>
+<script defer src="src/world.js"></script>
+<script defer src="src/story.js"></script>
+<script defer src="src/save.js"></script>
+<script defer src="src/input.js"></script>
+<script defer src="src/audio.js"></script>
+<script defer src="src/simulation.js"></script>
+<script defer src="src/render.js"></script>
+<script defer src="src/main.js"></script>
+</body>
+</html>
