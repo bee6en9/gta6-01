@@ -1,75 +1,47 @@
-const el=id=>document.getElementById(id);
-const canvas=el('city'),input=new Input(canvas),audio=new Soundscape(),sound=name=>audio.event(name);
-let world=createWorld();
-const renderer=new Renderer(canvas,el('minimap'),world);
-const ui=Object.fromEntries(['hud','district','stars','cash','health','healthValue','missionNo','missionName','objective',
-  'mapBox','dialogue','toast','arrest','hold','toolLabel','toolValue','toolTip','menu','titleArt','pauseTitle',
-  'start','resume','load','save','settings','menuNote'].map(key=>[key,el(key)]));
-let mode='title',expanded=false,last=0,nextHud=0,nextSave=35;
-const money=new Intl.NumberFormat('en-US');
-function put(node,value){if(node.textContent!==value)node.textContent=value;}
-function showMenu(title){
-  mode=title?'title':'pause';input.reset();
-  ui.hud.hidden=true;ui.menu.hidden=false;ui.start.hidden=!title;ui.titleArt.hidden=!title;
-  ui.pauseTitle.hidden=title;ui.resume.hidden=title;ui.save.hidden=title;
-  ui.load.hidden=!readSave();put(ui.menuNote,'');
+import {createWorld} from './world.js';
+import {Input} from './input.js';
+import {Soundtrack} from './audio.js';
+import {Renderer} from './render.js';
+import {update} from './simulation.js';
+import {saveGame,loadGame,hasSave} from './save.js';
+import {toast,speak} from './story.js';
+const canvas=document.getElementById('city');
+const input=new Input(canvas),sound=new Soundtrack();
+let world=createWorld(),mode='title',last=performance.now(),saveClock=0;
+const renderer=new Renderer(canvas,world),menu=document.getElementById('menu');
+function menuMode(next){
+  mode=next;menu.classList.toggle('hidden',next==='play');document.getElementById('hud').style.display=next==='title'?'none':'';
+  menu.classList.toggle('paused',next==='pause');
+  document.getElementById('resume').classList.toggle('hidden',next!=='pause');document.getElementById('save').classList.toggle('hidden',next!=='pause');
+  document.getElementById('continue').classList.toggle('hidden',!hasSave());
+  input.keys.clear();input.mouse.down=false;
 }
-function updateHud(){
-  const p=world.player,ride=p.car,job=contracts[world.mission],stars=Math.ceil(world.heat);
-  put(ui.district,district(p));put(ui.stars,'★'.repeat(stars)+'☆'.repeat(5-stars));
-  put(ui.cash,'$'+money.format(p.cash));put(ui.healthValue,Math.ceil(p.hp)+'%');ui.health.style.width=p.hp+'%';
-  put(ui.missionNo,world.race?'SIDE JOB  /  TIME TRIAL':job?'CONTRACT  /  0'+(world.mission+1):'KITE FM  /  84.3');
-  put(ui.missionName,world.race?'Coast Run':job?.name||'Breakwater is yours');
-  put(ui.objective,objective(world));
-  ui.dialogue.hidden=world.time>=world.lineUntil;put(ui.dialogue,world.line);
-  ui.toast.hidden=world.time>=world.toastUntil;put(ui.toast,world.toast);
-  ui.arrest.hidden=world.arrest<.12;put(ui.hold,Math.floor(world.arrest*50)+'%');
-  const near=ride?null:nearestCar(world);
-  put(ui.toolLabel,ride?ride.name.toUpperCase():'POCKET SIDEARM');
-  put(ui.toolValue,ride?Math.round(Math.abs(ride.speed)*.32)+' MPH':world.reloading?'RELOAD':world.ammo+' / '+world.reserve);
-  put(ui.toolTip,ride?'CONDITION '+Math.max(0,Math.ceil(ride.hp))+'%':near?'E / '+(near.owned?'ENTER ':'TAKE ')+near.name.toUpperCase():'CLICK / FIRE   R / LOAD');
+function play(fresh=false,load=false){
+  if(fresh||load){world=createWorld();if(load&&!loadGame(world))toast(world,'No compatible save yet. A new summer begins.');renderer.camera.x=world.player.x;renderer.camera.y=world.player.y;renderer.lastHud=-1;}
+  sound.start();menuMode('play');
+  if(fresh)speak(world,'KITE FM / 98.4','Breakwater, it’s going to be a hot one. Nia is waiting by the studio. Walk to the gold marker and press F.');
 }
-function play(){
-  audio.start();mode='play';input.reset();document.activeElement?.blur();
-  ui.menu.hidden=true;ui.hud.hidden=false;nextHud=0;nextSave=world.time+35;updateHud();
-}
-ui.start.onclick=()=>{
-  world=createWorld();expanded=false;ui.mapBox.classList.remove('big');
-  tell(world,'RHEA / Ari? Take the Tamarind down to the station. I’ve got a job for you.');
-  renderer.draw(world);play();
-};
-ui.resume.onclick=play;
-ui.load.onclick=()=>{
-  const save=readSave();
-  if(!save){put(ui.menuNote,'No valid save found.');return;}
-  world=restoreWorld(save);expanded=false;ui.mapBox.classList.remove('big');renderer.draw(world);play();
-};
-ui.save.onclick=()=>{
-  const ok=writeSave(world);put(ui.menuNote,ok?'Progress saved on this browser.':'Storage is unavailable in this browser.');
-  ui.load.hidden=!readSave();
-};
-ui.settings.onclick=()=>{
-  audio.muted=!audio.muted;ui.settings.firstChild.nodeValue='Sound: '+(audio.muted?'off ':'on ');
-};
-addEventListener('blur',()=>{if(mode==='play')showMenu(false);});
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='play')showMenu(false);});
+document.getElementById('start').onclick=()=>play(true);
+document.getElementById('continue').onclick=()=>play(false,true);
+document.getElementById('resume').onclick=()=>play();
+document.getElementById('save').onclick=()=>{const ok=saveGame(world);document.getElementById('saveInfo').textContent=ok?'Progress saved in this browser.':'Storage unavailable. Allow local storage to save.';};
+document.getElementById('sound').onclick=()=>{sound.muted=!sound.muted;document.getElementById('sound').textContent='Sound: '+(sound.muted?'off':'on');};
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='play')menuMode('pause');});
 function frame(now){
-  const dt=last?Math.min(.033,(now-last)/1000):0;last=now;
+  const dt=Math.min(.033,Math.max(0,(now-last)/1000));last=now;
+  if(input.tap('escape')){if(mode==='play')menuMode('pause');else if(mode==='pause')play();}
+  if(input.tap('enter')&&mode==='title')play(true);
   if(mode==='play'){
-    if(input.tap('Escape'))showMenu(false);
-    else{
-      if(input.tap('KeyM')||input.tap('Tab')){expanded=!expanded;ui.mapBox.classList.toggle('big',expanded);}
-      simulate(world,dt,input,sound,renderer.aim(world,input.mouse));
-      renderer.draw(world,dt,expanded);
-      if(world.time>=nextSave){nextSave=world.time+35;if(!world.heat)writeSave(world);}
-      if(world.time>=nextHud){nextHud=world.time+.07;updateHud();}
-    }
-  }else if(input.tap('Enter')&&document.activeElement?.tagName!=='BUTTON'){
-    if(mode==='pause')play();else ui.start.click();
+    if(input.tap('m')){renderer.largeMap=!renderer.largeMap;document.body.classList.toggle('map-open',renderer.largeMap);}
+    if(input.tap('r')){world.radio=!world.radio;toast(world,world.radio?'Kite FM / Back on air':'Radio off');}
+    if(input.tap('k')){toast(world,saveGame(world)?'Progress saved':'Could not save progress');}
+    if(!renderer.largeMap)update(world,input,dt,sound,renderer.screenToWorld(input.mouse.x,input.mouse.y));
+    sound.update(world,dt);saveClock+=dt;
+    if(saveClock>35||world.needsSave){saveGame(world);saveClock=0;world.needsSave=false;}
   }
-  audio.update(world,mode==='play');input.finish();requestAnimationFrame(frame);
+  renderer.draw(world,dt);input.finish();requestAnimationFrame(frame);
 }
-renderer.draw(world);
-performance.mark('breakwater-warm');
-showMenu(true);
-requestAnimationFrame(frame);
+// Rasterize the map and all actor paths while the opening menu covers the city.
+renderer.draw(world,1);renderer.draw(world,1);menuMode('title');requestAnimationFrame(frame);
+// A read-only observation surface for browser verification; gameplay stays input-driven.
+window.breakwater={get state(){return {mode,mission:world.mission,stage:world.stage,x:world.player.x,y:world.player.y,heading:world.player.a,speed:world.player.car?.v||0,inCar:!!world.player.car,vehicle:world.player.car?.name,vehicleHealth:world.player.car?.hp,hp:world.player.hp,money:world.player.money,heat:world.heat,arrest:world.arrest,escape:world.escape,cars:world.cars.length,people:world.people.length,police:world.police.length,tapes:world.collected.length};}};

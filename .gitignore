@@ -1,4 +1,5 @@
 # Local browser tooling supplied with the workspace
+# Keep verification dependencies and transient browser state out of the entry snapshot.
 .browsers/
 .npm-cache/
 .tools/

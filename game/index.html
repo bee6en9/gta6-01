@@ -1,58 +1,30 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#112237">
-<title>Breakwater ’84</title>
-<link rel="icon" href="data:,">
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#173d46">
+  <title>Breakwater '84 — Kite FM</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<canvas id="city" aria-label="Breakwater city"></canvas>
-<div id="hud" hidden>
-  <header class="mast"><b>BW<span>84</span></b><div><small>BREAKWATER COUNTY</small><strong id="district"></strong></div></header>
-  <section class="status slab" aria-label="Player status">
-    <div><small>POLICE SCANNER</small><strong id="stars"></strong></div>
-    <div class="money"><small>CASH</small><strong id="cash"></strong></div>
-    <div class="health"><small>VITALS <span id="healthValue"></span></small><div class="track"><i id="health"></i></div></div>
-  </section>
-  <section class="job slab"><small id="missionNo"></small><strong id="missionName"></strong><p id="objective"></p></section>
-  <aside id="mapBox" class="slab"><div class="maphead"><span>LOCAL GRID</span><b>N ↑</b></div><canvas id="minimap" width="320" height="320" aria-label="Map of Breakwater"></canvas><div class="mapfoot"><span>● LIVE</span><span>M / MAP</span></div></aside>
-  <div id="dialogue" class="slab" hidden></div>
-  <div id="toast" hidden></div>
-  <div id="arrest" class="slab" hidden>DETAINING <span id="hold"></span></div>
-  <div class="tools slab"><small id="toolLabel"></small><strong id="toolValue"></strong><span id="toolTip"></span></div>
-  <div class="keystrip">WASD <b>MOVE</b> &nbsp; E <b>RIDE</b> &nbsp; F <b>USE</b> &nbsp; ESC <b>MENU</b></div>
-</div>
-<main id="menu" hidden>
-  <div class="titleframe">
-    <div class="eyebrow"><span>● KITE FM 84.3</span><span>SUMMER / 1984</span></div>
-    <div id="titleArt">
-      <p class="pretend">A PIRATE RADIO STORY</p>
-      <h1>BREAK<span>WATER</span><em>’84</em></h1>
-      <p class="tagline">They bought the harbor.<br>They couldn’t buy the air.</p>
-    </div>
-    <h2 id="pauseTitle" hidden>ON HOLD</h2>
-    <div class="buttons">
-      <button id="start">Start the story <span>↗</span></button>
-      <button id="resume" hidden>Resume <span>↗</span></button>
-      <button id="load" hidden>Continue save <span>↗</span></button>
-      <button id="save" hidden>Save progress <span>↗</span></button>
-      <button id="settings">Sound: on <span>Q / RADIO</span></button>
-    </div>
-    <div id="menuNote" role="status"></div>
-    <footer>WASD / ARROWS · SHIFT RUN · SPACE BRAKE / FIRE<br>E ENTER / EXIT · F INTERACT · CLICK AIM / FIRE · R RELOAD</footer>
+  <canvas id="city" aria-label="Breakwater city. Move with WASD, enter vehicles with E, interact with F."></canvas>
+  <div id="hud">
+    <header id="objective"><span id="chapter">Kite FM / 01</span><h2 id="job">A voice on the coast</h2><p id="task">Find Nia at the station.</p><small id="distance"></small></header>
+    <aside id="status"><div class="radio">KITE <b>98.4</b><span id="radioState">FM • ON AIR</span></div><div id="stars">☆☆☆☆☆</div><div id="cash">$ 240</div><div id="heatText">No police attention</div></aside>
+    <section id="navigation"><canvas id="radar" width="190" height="190"></canvas><div id="district">Pelican Strand</div><div class="vitals"><span>HEALTH</span><div><i id="health"></i></div><b id="hp">100</b></div></section>
+    <div id="vehicle"><strong id="speed">0</strong><span>MPH</span><p id="carName">On foot</p><div id="condition"></div></div>
+    <div id="prompt"></div>
+    <footer id="controls">W A S D move / drive <em>E</em> enter / exit <em>F</em> interact <em>SPACE</em> melee / brake <em>CLICK</em> fire <em>M</em> map <em>ESC</em> pause</footer>
   </div>
-  <div class="edition"><span>01 / MARIGOLD COAST</span><span>ORIGINAL GAME BY MAKE.FUN ENTRANT</span></div>
-</main>
-<script defer src="src/world.js"></script>
-<script defer src="src/story.js"></script>
-<script defer src="src/save.js"></script>
-<script defer src="src/input.js"></script>
-<script defer src="src/audio.js"></script>
-<script defer src="src/simulation.js"></script>
-<script defer src="src/render.js"></script>
-<script defer src="src/main.js"></script>
+  <div id="dialogue"><span id="speaker"></span><p id="line"></p></div>
+  <div id="toast" role="status"></div>
+  <section id="menu" class="hidden">
+    <div class="menu-art"><div class="sun"></div><div class="mast"></div><div class="frequency">98.4 FM</div><div class="postcard">A city with something to hide.<br>A frequency with nothing to lose.</div></div>
+    <div class="menu-copy"><div class="edition">An open-world coastal crime story</div><h1>Breakwater<span>’84</span></h1><p class="intro">Summer, 1984. The port board owns the city.<br>You and a pirate radio station have other plans.</p><div id="menuButtons"><button id="start">Start a new summer <span>↵</span></button><button id="continue">Continue saved game</button><button id="resume" class="hidden">Resume the city</button><button id="save" class="hidden">Save progress</button><button id="sound">Sound: on</button></div><p class="menu-help">WASD to move • E to borrow a car • F to make trouble<br>Mouse to aim & fire • Space to fight or handbrake<br>Shift to sprint • M for city map • R for radio</p><small id="saveInfo">Your progress stays in this browser. No connection needed.</small></div>
+    <div class="menu-bottom">KITE FM / INDEPENDENT SINCE THIS MORNING <span>BREAKWATER COUNTY • SUMMER 1984</span></div>
+  </section>
+  <script type="module" src="src/main.js"></script>
 </body>
 </html>

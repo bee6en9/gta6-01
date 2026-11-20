@@ -1,48 +1,21 @@
-class Soundscape {
-  start(){
-    if(!this.ctx){
-      this.ctx=new AudioContext();
-      const a=this.ctx;
-      this.bus=a.createGain();this.bus.gain.value=.28;this.bus.connect(a.destination);
-      [this.motor,this.motorGain]=this.voice('triangle',39);
-      [this.siren,this.sirenGain]=this.voice('sine',420);
-    }
-    this.ctx.resume().catch(()=>{});
+export class Soundtrack {
+  constructor(){this.context=null;this.muted=false;this.beat=0;this.timer=0;}
+  start(){if(!this.context){this.context=new AudioContext();}this.context.resume();}
+  tone(frequency,duration=.12,type='triangle',volume=.035,slide=0){
+    if(!this.context||this.muted)return;
+    const t=this.context.currentTime,o=this.context.createOscillator(),g=this.context.createGain();
+    o.type=type;o.frequency.setValueAtTime(frequency,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(20,slide),t+duration);
+    g.gain.setValueAtTime(volume,t);g.gain.exponentialRampToValueAtTime(.001,t+duration);o.connect(g);g.connect(this.context.destination);o.start(t);o.stop(t+duration+.02);
   }
-  voice(shape,hz){
-    const a=this.ctx,o=a.createOscillator(),g=a.createGain();
-    o.type=shape;o.frequency.value=hz;g.gain.value=0;o.connect(g);g.connect(this.bus);o.start();
-    return [o,g];
-  }
-  note(hz,duration,volume,shape='sine',end=hz,delay=0){
-    if(!this.ctx||this.muted)return;
-    const a=this.ctx,t=a.currentTime+delay,o=a.createOscillator(),g=a.createGain();
-    o.type=shape;o.frequency.setValueAtTime(hz,t);o.frequency.exponentialRampToValueAtTime(end,t+duration);
-    g.gain.setValueAtTime(volume,t);g.gain.exponentialRampToValueAtTime(.0001,t+duration);
-    o.connect(g);g.connect(this.bus);o.start(t);o.stop(t+duration+.02);
-  }
-  event(name){
-    if(name==='shot')this.note(154,.12,.34,'sawtooth',42);
-    if(name==='hit')this.note(79,.18,.24,'triangle',33);
-    if(name==='door')this.note(90,.12,.2,'square',45);
-    if(name==='tick')this.note(630,.12,.2,'triangle',860);
-    if(name==='reward')[392,494,587,784].forEach((f,i)=>this.note(f,.27,.15,'triangle',f,i*.075));
-    if(name==='reload')this.note(460,.08,.08,'square',160);
-  }
-  update(w,playing){
-    if(!this.ctx)return;
-    const a=this.ctx,t=a.currentTime,p=w.player;
-    this.bus.gain.setTargetAtTime(this.muted?0:.28,t,.06);
-    this.motorGain.gain.setTargetAtTime(playing&&p.car?.hp>0?.16:0,t,.08);
-    this.motor.frequency.setTargetAtTime(36+Math.abs(p.car?.speed||0)*.23,t,.055);
-    const audible=w.police.some(c=>c.vehicle&&dist(c,p)<470);
-    this.sirenGain.gain.setTargetAtTime(playing&&w.heat&&audible?.10:0,t,.07);
-    this.siren.frequency.setTargetAtTime(565+155*Math.sin(w.time*7.6),t,.04);
-    if(!playing||!w.radio||this.muted||t<(this.next||0))return;
-    this.next=t+.22;const i=this.beat=(this.beat??-1)+1;
-    const bass=[55,55,65.4,49][Math.floor(i/8)%4],lead=[220,0,329.63,0,293.66,261.63,0,196][i%8];
-    if(i%2===0)this.note(bass,.29,.18,'triangle');
-    if(i%4===0)this.note(108,.19,.17,'sine',35);
-    if(lead)this.note(lead,.21,.07,'triangle',lead*1.003);
+  shot(){this.tone(140,.09,'sawtooth',.07,35);}
+  crash(){this.tone(75,.16,'square',.055,22);}
+  chime(){this.tone(440,.2);setTimeout(()=>this.tone(660,.24),100);setTimeout(()=>this.tone(880,.3),200);}
+  alarm(){this.tone(660,.3,'square',.035,330);}
+  update(w,dt){
+    this.timer-=dt;if(this.timer>0)return;this.timer=.18;
+    if(w.heat>0)this.tone(this.beat%4<2?520:710,.16,'sine',.015);
+    if(w.player.car)this.tone(37+Math.abs(w.player.car.v)*.19,.19,'sawtooth',.012);
+    if(w.radio){const notes=[164.81,196,220,196,146.83,174.61,220,174.61];this.tone(notes[this.beat%8],.16,'triangle',.024);if(this.beat%2===0)this.tone(notes[this.beat%8]*2,.11,'sine',.018);if(this.beat%4===0)this.tone(65,.13,'sine',.055,30);}
+    this.beat++;
   }
 }

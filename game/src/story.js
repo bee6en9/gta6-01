@@ -1,93 +1,68 @@
-const contracts = [
-  {name:'Dead Air',pay:350,brief:'Take the gold Tamarind to Kite FM.'},
-  {name:'The Salt Ledger',pay:750,brief:'Clear the depot. Recover the ledger on foot.'},
-  {name:'Open Frequency',pay:950,brief:'Lose the patrol, then meet Sol at the exchange.'},
-  {name:'Everybody Hears',pay:1450,brief:'Reach Last Light and put the ledger on air.'}
+import {places,distance} from './world.js';
+export const chapters=[
+  {name:'A voice on the coast',brief:'Meet Nia outside Kite FM. Press F at the gold marker.',reward:180},
+  {name:'Magnetic evidence',brief:'Pick up a recording at the boardwalk, then bring it to Kite FM.',reward:300},
+  {name:'Borrowed authority',brief:'Steal the port courier from Rook Motors. Deliver it to the docks.',reward:450},
+  {name:'Paper trail',brief:'Get past the port guards and take the board’s ledger.',reward:650},
+  {name:'Dead air',brief:'Lose the police, then reconnect the civic relay on foot.',reward:750},
+  {name:'The whole city listens',brief:'Bring the evidence home. Put the port board on the air.',reward:1200}
 ];
-const coastGates=[point(2619,1658,'01'),point(2619,2150,'02'),point(2098,2150,'03'),point(2098,1183,'04'),point(2619,1183,'FINISH')];
-function tell(w,line){
-  w.line=line;w.lineUntil=w.time+10;
+export function toast(w,text) {w.toast=text;w.toastUntil=w.time+4;}
+export function speak(w,who,text,seconds=7) {w.dialogue={who,text};w.dialogueUntil=w.time+seconds;}
+export function target(w) {
+  if(w.mission===0)return places[0];
+  if(w.mission===1)return places[w.stage===0?1:0];
+  if(w.mission===2)return w.stage===0?places[2]:places[3];
+  if(w.mission===3)return places[3];
+  if(w.mission===4)return w.heat>0?null:places[4];
+  if(w.mission===5)return places[0];
+  return null;
 }
-function notify(w,line){
-  w.toast=line;w.toastUntil=w.time+3.4;
+export function objective(w) {
+  const p=w.player;
+  if(w.mission===0)return 'F • Talk to Nia at Kite FM';
+  if(w.mission===1)return w.stage===0?'F • Collect Sol’s tape at the boardwalk':'F • Deliver the tape to Nia';
+  if(w.mission===2)return w.stage===0?'E • Steal the silver Port courier at Rook Motors':'Drive the Port courier to Southport records';
+  if(w.mission===3)return 'F • Take the ledger. Watch for port security.';
+  if(w.mission===4)return w.heat>0?'Escape the search. Keep your distance from police.':p.car?'Exit your car at the civic relay.':'F • Reconnect the civic relay';
+  if(w.mission===5)return 'F • Broadcast the evidence from Kite FM';
+  return 'Free roam • Find six lost tapes, visit the diner, make your own summer.';
 }
-function raiseHeat(w,amount){
-  w.heat=clamp(w.heat+amount,0,5);w.search=10;
+export function complete(w,sound) {
+  const chapter=chapters[w.mission];
+  w.player.money+=chapter.reward;w.completed++;w.mission++;w.stage=0;w.missionTime=0;
+  toast(w,'Chapter complete  +$'+chapter.reward);sound.chime();
+  if(w.mission===1)speak(w,'NIA / KITE FM','Sol recorded the board chairman taking a payoff. He left the tape by the boardwalk. Bring it home.');
+  if(w.mission===2)speak(w,'ROOK / MOTOR POOL','The silver courier has a port pass. Nobody checks those. Borrow it and head south to the records office.');
+  if(w.mission===3)speak(w,'NIA / KITE FM','You’re inside. The ledger is by the yellow crates. Security is bought and paid for. Keep moving.');
+  if(w.mission===4){w.heat=Math.max(2,w.heat);speak(w,'NIA / KITE FM','They know. Shake the patrols, then reconnect our civic relay. You’ll need to get out and do it by hand.');}
+  if(w.mission===5)speak(w,'NIA / KITE FM','Signal’s clean. Bring that ledger to the studio. Tonight the whole city gets the truth.');
+  if(w.mission===6)speak(w,'KITE FM / LIVE','Chairman Vale, Breakwater can hear you now. Every payoff. Every stolen pier. This city belongs to the people who live here.',13);
+  w.needsSave=true;
 }
-function target(w){
-  if(w.race)return coastGates[w.race.gate];
-  if(w.mission===0)return w.phase||w.player.car?places.radio:{...w.starter,name:'TAMARIND GT'};
-  return [null,places.depot,places.relay,w.phase?places.radio:places.beacon][w.mission]||null;
-}
-function objective(w){
-  if(w.race)return 'Gate '+(w.race.gate+1)+' / '+coastGates.length+'  ·  '+Math.ceil(75-w.race.time)+'s';
-  if(w.mission===0&&!w.phase&&!w.player.car)return 'Get in the gold Tamarind  [E]';
-  if(w.mission===1){
-    const n=w.guards.filter(g=>g.hp>0).length;
-    if(n)return 'Clear Cinder Depot  ·  '+n+' enforcers';
-  }
-  if(w.mission===3&&w.phase)return w.heat?'Lose the patrol to return to Kite FM.':'Return to Kite FM and meet Rhea.';
-  return contracts[w.mission]?.brief||'Free roam  ·  Race, recover tapes, or trade rides.';
-}
-function clearContract(w,sound,line){
-  const job=contracts[w.mission++];
-  w.phase=0;w.player.cash+=job.pay;w.player.hp=Math.max(75,w.player.hp);
-  w.reserve=Math.max(32,w.reserve);
-  notify(w,'CONTRACT CLEARED   +$'+job.pay);tell(w,line);sound('reward');
-}
-function storyStep(w,use,dt,sound){
-  const p=w.player,t=target(w);
-  if(w.mission===0&&p.car)w.phase=1;
-  if(w.mission===0&&p.car&&dist(p,places.radio)<48){
-    clearContract(w,sound,'RHEA / Port Authority cut our transmitter. Their payout ledger is at Cinder. Bring it here and we can name names.');
-    writeSave(w);return;
-  }
-  if(use&&t&&!w.race&&w.mission>0&&w.mission<4&&dist(p,t)<48){
-    if(w.mission===1){
-      if(p.car||w.guards.some(g=>g.hp>0)){notify(w,'CLEAR THE DEPOT AND APPROACH ON FOOT');return;}
-      clearContract(w,sound,'RHEA / It has everything. Sol can route this through the harbor beacon. Lose the patrol before you meet him.');
-      raiseHeat(w,2);
-    }else if(w.heat){notify(w,'SHAKE THE PATROL FIRST');return;}
-    else if(w.mission===2)clearContract(w,sound,'SOL / Beacon relay is up. Take the ledger to Last Light. Rhea will be listening.');
-    else if(!w.phase){
-      w.phase=1;raiseHeat(w,3);sound('reward');notify(w,'KITE FM IS LIVE');
-      tell(w,'RHEA / This is Kite. We have the dates, the money and the names. Coast Guard, check your harbor.');
-    }else clearContract(w,sound,'RHEA / The port board resigned this morning. Keep the station on, Ari.');
-    writeSave(w);return;
-  }
-  for(let i=0;i<w.tapes.length;i++)if(!w.found.includes(i)&&dist(p,w.tapes[i])<20){
-    w.found.push(i);p.cash+=110;notify(w,'LOST MASTER '+w.found.length+'/6   +$110');sound('reward');writeSave(w);
-  }
-  if(w.race){
-    w.race.time+=dt;
-    if(w.race.time>=75){w.race=null;notify(w,'COAST RUN / TIME EXPIRED');}
-    else if(p.car&&dist(p,t)<58){
-      sound('tick');
-      if(++w.race.gate===coastGates.length){
-        const time=w.race.time;w.best=w.best?Math.min(w.best,time):time;w.race=null;p.cash+=520;
-        notify(w,'COAST RUN / '+time.toFixed(1)+'s   +$520');sound('reward');writeSave(w);
-      }
+export function updateStory(w,input,sound) {
+  const p=w.player,t=target(w);w.missionTime+=1/60;
+  if(w.mission===2){
+    const courier=w.cars.find(car=>car.courier);
+    if(courier.hp<=0){
+      courier.x=2228;courier.y=810;courier.a=0;courier.v=0;courier.hp=100;w.stage=0;
+      toast(w,'Rook recovered the courier • Pick it up at the motor pool');
     }
-    return;
   }
-  if(!use)return;
-  if(dist(p,places.circuit)<45){
-    if(!p.car){notify(w,'BRING A CAR TO THE COAST RUN');return;}
-    w.race={gate:0,time:0};notify(w,'COAST RUN / 75 SECONDS');sound('tick');return;
+  if(w.mission===2&&w.stage===0&&p.car?.courier){w.stage=1;toast(w,'Port pass acquired • Drive to Southport');}
+  if(w.mission===2&&w.stage===1&&p.car?.courier&&distance(p,places[3])<85)complete(w,sound);
+  if(input.tap('f')){
+    if(t&&distance(p,t)<86){
+      if(w.mission===0){speak(w,'NIA / KITE FM','You’re our new wheelman? Good. The port board is selling our coast. Let’s give Breakwater a voice.');complete(w,sound);}
+      else if(w.mission===1){if(w.stage===0){w.stage=1;speak(w,'SOL / BOARDWALK','I kept a copy. The chairman’s voice is unmistakable. Don’t let his people take it.');sound.chime();}else complete(w,sound);}
+      else if(w.mission===3){complete(w,sound);sound.alarm();}
+      else if(w.mission===4&&!p.car)complete(w,sound);
+      else if(w.mission===5)complete(w,sound);
+    }else if(distance(p,places[5])<85){
+      if(p.money>=40){p.money-=40;p.hp=100;if(p.car)p.car.hp=100;toast(w,'Mara’s special • Health and vehicle restored ($40)');sound.chime();}else toast(w,'Mara: Come back with $40, honey.');
+    }else if(distance(p,places[2])<90&&w.mission!==2){
+      if(p.money>=100){p.money-=100;w.heat=0;w.escape=0;w.arrest=0;w.police.length=0;if(p.car)p.car.hp=100;toast(w,'Rook’s respray • Search called off ($100)');}
+    }
   }
-  if(dist(p,places.yard)<54&&p.car&&!p.car.owned){
-    const c=p.car;c.sold=true;p.car=null;p.x=c.x;p.y=c.y+22;p.cash+=280;
-    notify(w,'SALVAGED   +$280');sound('reward');writeSave(w);return;
-  }
-  if(dist(p,places.clinic)<45){
-    if(p.cash<60){notify(w,'TREATMENT COSTS $60');return;}
-    p.cash-=60;p.hp=100;notify(w,'PATCHED UP   −$60');writeSave(w);return;
-  }
-  if(dist(p,places.garage)<45){
-    if(w.heat){notify(w,'GARAGE CLOSED DURING PURSUIT');return;}
-    if(!w.tuned&&p.cash>=650){p.cash-=650;w.tuned=true;notify(w,'ENGINE & ARMOR FITTED   −$650');}
-    else notify(w,'GEAR RESTOCKED / CAR REPAIRED');
-    p.hp=100;w.ammo=8;w.reserve=48;if(p.car)p.car.hp=100;
-    sound('reward');writeSave(w);
-  }
+  for(let i=0;i<w.tapes.length;i++)if(!w.collected.includes(i)&&distance(p,w.tapes[i])<24){w.collected.push(i);p.money+=75;sound.chime();toast(w,'Lost mixtape '+w.collected.length+'/6 • +$75');w.needsSave=true;}
 }

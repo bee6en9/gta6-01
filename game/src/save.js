@@ -1,39 +1,38 @@
-const SLOT='breakwater84.slot.v1';
-const finite = (x,fallback,lo,hi) => Number.isFinite(x)?clamp(x,lo,hi):fallback;
-function readSave(){
-  try{
-    const save=JSON.parse(localStorage.getItem(SLOT));
-    return save?.version===1&&typeof save.player==='object'&&save.player?save:null;
-  }catch{return null;}
+import {solid} from './world.js';
+const KEY='breakwater84-fresh-v1';
+export function saveGame(w) {
+  try {
+    const p=w.player;
+    const snapshot=car=>car?{x:car.x,y:car.y,a:car.a,hp:car.hp,name:car.name,color:car.color,courier:!!car.courier}:null;
+    localStorage.setItem(KEY,JSON.stringify({version:1,x:p.x,y:p.y,hp:p.hp,money:p.money,mission:w.mission,stage:w.stage,collected:w.collected,completed:w.completed,radio:w.radio,vehicle:snapshot(p.car),courier:snapshot(w.cars.find(car=>car.courier)),date:new Date().toISOString()}));
+    return true;
+  }catch{return false;}
 }
-function writeSave(w){
-  const p=w.player,c=p.car;
-  const player={x:p.x,y:p.y,a:p.a,hp:p.hp,cash:p.cash};
-  const ride=c?{x:c.x,y:c.y,a:c.a,hp:c.hp,color:c.color,name:c.name,kind:c.kind,owned:c.owned}:null;
-  const save={version:1,player,ride,mission:w.mission,phase:w.phase,found:w.found,best:w.best,
-    tuned:w.tuned,radio:w.radio,ammo:w.ammo,reserve:w.reserve,guards:w.guards.map(g=>g.hp),heat:w.heat};
-  try{localStorage.setItem(SLOT,JSON.stringify(save));return true;}catch{return false;}
-}
-function restoreWorld(save){
-  const w=createWorld(),p=w.player,s=save.player;
-  const x=finite(s.x,p.x,12,LAND-12),y=finite(s.y,p.y,12,SIZE-12);
-  if(!solid(w,x,y,9)){p.x=x;p.y=y;}
-  p.a=finite(s.a,0,-10000,10000);p.cash=Math.floor(finite(s.cash,180,0,1e7));
-  p.hp=finite(s.hp,100,1,100);
-  for(const [key,fallback,max] of [['mission',0,4],['phase',0,1],['ammo',8,8],['reserve',48,250],['heat',0,5]])
-    w[key]=Math.floor(finite(save[key],fallback,0,max));
-  w.search=w.heat?8:0;
-  w.best=finite(save.best,0,0,75);w.tuned=save.tuned===true;w.radio=save.radio!==false;
-  if(Array.isArray(save.found))w.found=[...new Set(save.found.filter(n=>Number.isInteger(n)&&n>=0&&n<w.tapes.length))];
-  w.guards.forEach((g,i)=>g.hp=finite(save.guards?.[i],w.mission>1?0:45,0,45));
-  if(save.ride&&!solid(w,p.x,p.y,18)){
-    const c=carAt(p.x,p.y,p.a,0),r=save.ride;
-    c.a=finite(r.a,p.a,-10000,10000);c.hp=finite(r.hp,100,1,100);
-    c.kind=Math.floor(finite(r.kind,0,0,2));c.owned=r.owned===true;
-    if(typeof r.color==='string'&&/^#[a-f0-9]{6}$/i.test(r.color))c.color=r.color;
-    if(typeof r.name==='string')c.name=r.name.slice(0,24);
-    if(c.owned)w.starter.sold=true;
-    p.car=c;w.cars.push(c);
-  }
-  w.camera.x=p.x;w.camera.y=p.y;return w;
+export function hasSave(){try{return !!localStorage.getItem(KEY);}catch{return false;}}
+export function loadGame(w) {
+  try {
+    const data=JSON.parse(localStorage.getItem(KEY));
+    if(!data||data.version!==1)return false;
+    const p=w.player;
+    if(Number.isFinite(data.x)&&Number.isFinite(data.y)&&!solid(w,data.x,data.y)){p.x=data.x;p.y=data.y;}
+    p.hp=Math.max(30,Math.min(100,Number(data.hp)||100));p.money=Math.max(0,Number(data.money)||0);
+    w.mission=Math.max(0,Math.min(6,Math.floor(data.mission)||0));w.stage=data.stage===1?1:0;
+    w.collected=Array.isArray(data.collected)?data.collected.filter(n=>Number.isInteger(n)&&n>=0&&n<6):[];
+    w.completed=w.mission;w.radio=data.radio!==false;
+    const restore=(car,snapshot)=>{
+      if(!snapshot||!Number.isFinite(snapshot.x)||!Number.isFinite(snapshot.y)||solid(w,snapshot.x,snapshot.y,16))return false;
+      car.x=snapshot.x;car.y=snapshot.y;car.a=Number(snapshot.a)||0;car.v=0;car.hp=Math.max(0,Math.min(100,Number(snapshot.hp)||0));car.stolen=true;car.traffic=false;
+      if(typeof snapshot.name==='string')car.name=snapshot.name;
+      if(/^#[0-9a-f]{6}$/i.test(snapshot.color))car.color=snapshot.color;
+      return true;
+    };
+    const courier=w.cars.find(car=>car.courier);
+    restore(courier,data.courier);
+    if(data.vehicle){
+      const car=data.vehicle.courier?courier:w.cars.find(car=>!car.traffic&&!car.courier);
+      if(restore(car,data.vehicle)&&car.hp>0){p.car=car;p.x=car.x;p.y=car.y;p.a=car.a;}
+    }
+    if(w.mission===2&&w.stage===1&&!data.courier)w.stage=0;
+    return true;
+  }catch{return false;}
 }
